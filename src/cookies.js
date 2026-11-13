@@ -9,7 +9,6 @@ function fromObject(c, siteUrl) {
   const out = { name: c.name, value: String(c.value) };
   if (c.domain) { out.domain = c.domain; out.path = c.path || '/'; } else if (c.url) out.url = c.url;
   else out.url = siteUrl;
-  if (c.domain === undefined && c.path && !out.url) out.path = c.path;
   const exp = c.expirationDate ?? c.expires;
   out.expires = typeof exp === 'number' && exp > 0 ? exp : -1;
   if (typeof c.httpOnly === 'boolean') out.httpOnly = c.httpOnly;
