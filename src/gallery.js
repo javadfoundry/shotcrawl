@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const OPTION_KEYS = ['maxPages', 'maxDepth', 'exclude', 'includeSubdomains', 'respectRobots', 'disableAnimations', 'hideCookieBanners', 'extraWaitMs', 'hiDpi', 'concurrency', 'delayMs'];
+const OPTION_KEYS = ['maxPages', 'maxDepth', 'exclude', 'includeSubdomains', 'respectRobots', 'disableAnimations', 'hideCookieBanners', 'extraWaitMs', 'hiDpi', 'concurrency', 'delayMs', 'browser'];
 
 export function buildManifest({ site, startedAt, finishedAt, authenticated, options, devices, pages, skipped, warnings, stopReason }) {
   const safeOptions = Object.fromEntries(OPTION_KEYS.filter((k) => k in options).map((k) => [k, options[k]]));

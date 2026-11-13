@@ -115,3 +115,33 @@ describe('redaction', () => {
     expect(JSON.stringify(job.history)).not.toContain('TOPSECRET');
   });
 });
+
+describe('browser selection and auth endpoints', () => {
+  const post = (path, body, headers = {}) => api(path, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+
+  it('lists browsers and rejects unknown/uninstalled ones', async () => {
+    const list = await (await api('/api/browsers')).json();
+    expect(list.find((b) => b.key === 'chromium')).toBeTruthy();
+    expect((await post('/api/jobs', { url: fixture.url, browser: 'netscape' })).status).toBe(400);
+    expect((await post('/api/auth', { url: fixture.url, browser: 'netscape', mode: 'extract' })).status).toBe(400);
+  });
+
+  it('rejects cross-origin state-changing requests', async () => {
+    const r = await post('/api/jobs', { url: fixture.url }, { origin: 'https://evil.example' });
+    expect(r.status).toBe(403);
+  });
+
+  it('runs a job on Google Chrome when installed, without leaking cookies via auth API', async () => {
+    const list = await (await api('/api/browsers')).json();
+    if (!list.find((b) => b.key === 'chrome')?.installed) return;
+    const { st } = await runJob({ browser: 'chrome', devices: ['mobile'], maxPages: 3, cookies: 'session=abc' });
+    expect(st.state).toBe('done');
+    expect(st.manifest.options.browser).toBe('chrome');
+    expect(JSON.stringify(st)).not.toContain('abc');
+  }, 120000);
+
+  it('page cap is never exceeded', async () => {
+    const { st } = await runJob({ devices: ['desktop'], maxPages: 2 });
+    expect(st.manifest.pages.length).toBeLessThanOrEqual(2);
+  }, 120000);
+});

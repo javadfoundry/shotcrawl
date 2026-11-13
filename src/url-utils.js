@@ -74,3 +74,11 @@ export function slugFor(url, used = new Set()) {
 }
 
 export function isLoginUrl(url) { return config.loginPathRe.test(url); }
+
+// Same host ignoring protocol, port and a leading "www." (used to follow the start URL's own canonical redirect).
+export function isSameHostLoose(a, b) {
+  try {
+    const h = (u) => new URL(u).hostname.toLowerCase().replace(/^www\./, '');
+    return h(a) === h(b);
+  } catch { return false; }
+}

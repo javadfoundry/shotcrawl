@@ -14,15 +14,106 @@ const addLi = (ul, text, cls) => { const li = document.createElement('li'); li.t
 
 function setRunning(r) {
   $('start').disabled = r; $('cancel').hidden = !r;
-  $('cookie-state').hidden = !(r && window.__hadCookie);
 }
+
+// ---- browser + auth -------------------------------------------------------
+let browsers = [], authId = null, authPoll = null;
+const jpost = (u, b) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b || {}) });
+const authBase = () => ({ browser: $('browser').value, profile: $('profile').value || undefined, url: $('url').value.trim() });
+const setAuthState = (t) => { $('auth-state').textContent = t; };
+
+async function loadBrowsers() {
+  browsers = await (await fetch('/api/browsers')).json();
+  const sel = $('browser'); sel.textContent = '';
+  const ok = browsers.filter((b) => b.installed);
+  const order = ['chrome', ...ok.map((b) => b.key)];
+  const pick = order.find((k) => ok.some((b) => b.key === k)) || 'chromium';
+  ok.forEach((b) => { const o = document.createElement('option'); o.value = b.key; o.textContent = b.label; sel.append(o); });
+  sel.value = pick;
+  const missing = browsers.filter((b) => !b.installed).map((b) => b.label);
+  $('browser-note').textContent = missing.length ? `نصب نیست: ${missing.join('، ')}` : '';
+  await onBrowserChange();
+}
+
+async function onBrowserChange() {
+  const b = browsers.find((x) => x.key === $('browser').value);
+  const real = !!b?.realProfile;
+  [...$('auth-mode').options].forEach((o) => { if (o.value === 'profile') o.disabled = !real; });
+  if (!real && $('auth-mode').value === 'profile') $('auth-mode').value = 'none';
+  const sel = $('profile'); sel.textContent = '';
+  if (real) {
+    const ps = await (await fetch(`/api/browsers/${b.key}/profiles`)).json();
+    ps.forEach((p) => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.append(o); });
+  }
+  updateAuthUi();
+}
+
+function resetAuth() {
+  clearInterval(authPoll);
+  if (authId) fetch(`/api/auth/${authId}`, { method: 'DELETE' });
+  authId = null; setAuthState(''); $('login-done').hidden = true;
+}
+
+function updateAuthUi() {
+  const m = $('auth-mode').value, real = !$('auth-mode').options[1].disabled;
+  $('profile-row').hidden = !((m === 'profile') || (m === 'login' && real));
+  $('login-row').hidden = m !== 'login';
+  $('profile-read').hidden = m !== 'profile';
+  $('paste-row').hidden = m !== 'paste';
+}
+
+$('browser').onchange = () => { resetAuth(); onBrowserChange(); };
+$('auth-mode').onchange = () => { resetAuth(); updateAuthUi(); };
+$('url').addEventListener('change', resetAuth);
+
+async function authCall(body) {
+  const url = $('url').value.trim();
+  if (!url) { setAuthState(''); $('form-err').textContent = 'ابتدا آدرس سایت را وارد کنید.'; return null; }
+  $('form-err').textContent = '';
+  const res = await jpost('/api/auth', { ...authBase(), ...body });
+  const data = await res.json();
+  if (!res.ok) { $('form-err').textContent = data.error; return null; }
+  return data;
+}
+
+$('profile-read').onclick = async () => {
+  resetAuth(); setAuthState('در حال خواندن…');
+  const d = await authCall({ mode: 'extract' });
+  if (!d) return setAuthState('');
+  authId = d.id;
+  setAuthState(d.count ? `کوکی: فعال (${d.count} مورد)` : 'کوکی‌ای برای این سایت در پروفایل نبود؛ ابتدا در Chrome وارد سایت شوید.');
+};
+
+$('login-open').onclick = async () => {
+  resetAuth(); setAuthState('پنجرهٔ مرورگر باز شد؛ وارد حساب شوید و سپس «ورود انجام شد» را بزنید.');
+  const d = await authCall({ mode: 'login' });
+  if (!d) return setAuthState('');
+  authId = d.id; $('login-done').hidden = false;
+  authPoll = setInterval(async () => {
+    const r = await fetch(`/api/auth/${authId}`); if (!r.ok) return clearInterval(authPoll);
+    if ((await r.json()).state === 'closed') setAuthState('پنجره بسته شد؛ برای ادامه «ورود انجام شد» را بزنید.');
+  }, 2000);
+};
+
+$('login-done').onclick = async () => {
+  clearInterval(authPoll);
+  const r = await jpost(`/api/auth/${authId}/finish`);
+  if (!r.ok) return setAuthState('نشست پیدا نشد.');
+  const d = await r.json();
+  $('login-done').hidden = true;
+  setAuthState(d.count ? `کوکی: فعال (${d.count} مورد)` : 'کوکی‌ای دریافت نشد؛ مطمئن شوید وارد سایت شده‌اید.');
+};
+
+loadBrowsers();
 
 $('form').onsubmit = async (e) => {
   e.preventDefault();
   $('form-err').textContent = '';
-  const cookies = $('cookies').value;
+  const mode = $('auth-mode').value;
+  const cookies = mode === 'paste' ? $('cookies').value : '';
   const body = {
-    url: $('url').value.trim(), cookies,
+    url: $('url').value.trim(), browser: $('browser').value,
+    ...(mode === 'paste' ? { cookies } : {}), ...(authId && ['profile', 'login'].includes(mode) ? { authId } : {}),
     devices: [...document.querySelectorAll('[name=device]:checked')].map((c) => c.value),
     maxPages: +$('maxPages').value, maxDepth: +$('maxDepth').value, extraWaitMs: +$('extraWaitMs').value,
     exclude: $('exclude').value.split('\n'),
@@ -32,8 +123,8 @@ $('form').onsubmit = async (e) => {
   const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await res.json();
   if (!res.ok) { $('form-err').textContent = data.error; return; }
-  window.__hadCookie = !!cookies.trim();
   $('cookies').value = '';              // never keep the cookie in the UI after submission
+  authId = null; clearInterval(authPoll);   // the server consumed the cookie session
   jobId = data.id;
   $('progress-section').hidden = false; $('results-section').hidden = true;
   $('discovered').textContent = ''; $('log').textContent = ''; $('bar').value = 0; $('counter').textContent = '';

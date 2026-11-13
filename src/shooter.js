@@ -84,13 +84,13 @@ async function shootOne(context, url, o, dpr) {
  * Screenshots every page on every device. Mutates page.shots[device].
  * pages: [{url, slug, ...}] ; emits 'shot' events.
  */
-export async function shoot({ browser, pages, deviceKeys, options, cookies = [], runDir, emit = () => {}, signal }) {
+export async function shoot({ browser, family, pages, deviceKeys, options, cookies = [], runDir, emit = () => {}, signal }) {
   const total = pages.length * deviceKeys.length;
   let index = 0;
   for (const p of pages) p.shots = {};
   for (const key of deviceKeys) {
     if (signal?.aborted) break;
-    const opts = deviceOptions(key, options.hiDpi);
+    const opts = deviceOptions(key, options.hiDpi, family);
     const context = await browser.newContext(opts);
     try {
       await guardContext(context, [...config.excludePatterns, ...(options.exclude || [])]);

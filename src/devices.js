@@ -12,7 +12,7 @@ export const devices = {
   },
 };
 
-export function deviceOptions(key, hiDpi = false) {
+export function deviceOptions(key, hiDpi = false, family = 'chromium') {
   const d = devices[key];
   if (!d) throw new Error(`unknown device: ${key}`);
   const o = {
@@ -21,5 +21,6 @@ export function deviceOptions(key, hiDpi = false) {
     serviceWorkers: 'block', // service workers would bypass the request guard (context.route)
   };
   if (d.userAgent) o.userAgent = d.userAgent;
+  if (family === 'firefox') delete o.isMobile; // not supported by Firefox contexts
   return o;
 }

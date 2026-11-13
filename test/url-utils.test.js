@@ -45,3 +45,11 @@ describe('exclusion bypass', () => {
     expect(isExcluded('http://a.com/%E0%A4%A')).toBe(true);
   });
 });
+
+import { isSameHostLoose } from '../src/url-utils.js';
+describe('isSameHostLoose', () => {
+  it('ignores protocol, port and www', () => {
+    expect(isSameHostLoose('http://a.com/x', 'https://www.a.com')).toBe(true);
+    expect(isSameHostLoose('http://b.com', 'https://a.com')).toBe(false);
+  });
+});

@@ -2,16 +2,17 @@ import { config } from './config.js';
 import { deviceOptions } from './devices.js';
 import { guardContext, sleep } from './guard.js';
 import { discoverSitemapUrls, fetchText, parseRobotsDisallow } from './sitemap.js';
-import { normalizeUrl, isSameSite, hasNonPageExtension, isExcluded, isLoginUrl } from './url-utils.js';
+import { normalizeUrl, isSameSite, isSameHostLoose, hasNonPageExtension, isExcluded, isLoginUrl } from './url-utils.js';
 
 /**
  * Discovers pages. Returns { pages, skipped, warnings, stopReason }.
  * pages: [{url, depth, source, status, title}]
  */
-export async function crawl({ browser, startUrl, options, cookies = [], emit = () => {}, signal }) {
+export async function crawl({ browser, family, startUrl, options, cookies = [], emit = () => {}, signal }) {
   const o = options;
   const excludes = [...config.excludePatterns, ...(o.exclude || [])];
   const start = normalizeUrl(startUrl);
+  let base = start; // canonical origin; follows the start URL's own redirect (http->https, www, ...)
   const accepted = [], skipped = [], warnings = [];
   const seen = new Set();
   const queue = [];
@@ -25,7 +26,7 @@ export async function crawl({ browser, startUrl, options, cookies = [], emit = (
   }
   const allowed = (url) => !disallow.some((d) => new URL(url).pathname.startsWith(d));
   const eligible = (url) =>
-    isSameSite(url, start, o.includeSubdomains) && !hasNonPageExtension(url) && !isExcluded(url, excludes) && allowed(url);
+    isSameSite(url, base, o.includeSubdomains) && !hasNonPageExtension(url) && !isExcluded(url, excludes) && allowed(url);
 
   const enqueue = (raw, depth, source) => {
     const url = normalizeUrl(raw);
@@ -39,7 +40,7 @@ export async function crawl({ browser, startUrl, options, cookies = [], emit = (
     for (const u of await discoverSitemapUrls(start, fetch, o.includeSubdomains)) enqueue(u, 1, 'sitemap');
   } catch { /* sitemap is best-effort */ }
 
-  const context = await browser.newContext(deviceOptions('desktop'));
+  const context = await browser.newContext(deviceOptions('desktop', false, family));
   await guardContext(context, excludes);
   if (cookies.length) await context.addCookies(cookies);
 
@@ -54,7 +55,8 @@ export async function crawl({ browser, startUrl, options, cookies = [], emit = (
       const status = resp ? resp.status() : 0;
       const finalUrl = normalizeUrl(page.url());
       if (status >= 400 || !resp) { skipped.push({ url: item.url, reason: String(status || 'no response') }); return; }
-      if (!finalUrl || !isSameSite(finalUrl, start, o.includeSubdomains)) {
+      if (item.depth === 0 && finalUrl && isSameHostLoose(finalUrl, start)) base = finalUrl;
+      if (!finalUrl || !isSameSite(finalUrl, base, o.includeSubdomains)) {
         skipped.push({ url: item.url, reason: 'redirected to another site' }); return;
       }
       if (finalUrl !== item.url) {
@@ -82,6 +84,8 @@ export async function crawl({ browser, startUrl, options, cookies = [], emit = (
     const workers = Array.from({ length: Math.max(1, o.concurrency) }, async () => {
       while (!signal?.aborted) {
         if (accepted.length >= o.maxPages) { stopReason = `reached the ${o.maxPages}-page cap`; return; }
+        // pages in flight may still be accepted, so never start more than the cap allows
+        if (accepted.length + active >= o.maxPages) { await sleep(50); continue; }
         const item = queue.shift();
         if (!item) {
           // another worker may still add links; yield briefly if others are active

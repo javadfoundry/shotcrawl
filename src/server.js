@@ -7,6 +7,9 @@ import { config } from './config.js';
 import { parseCookies, CookieError } from './cookies.js';
 import { Job, getJob, getActiveJob } from './jobs.js';
 import { devices as deviceDefs } from './devices.js';
+import { listBrowsers, isBrowserKey, isInstalled } from './browsers.js';
+import { listProfiles } from './profiles.js';
+import { AuthError, extractFromProfile, openLogin, finishLogin, authStatus, takeCookies, cancelAuth } from './auth.js';
 
 const bad = (res, msg) => res.status(400).json({ error: msg });
 const bool = (v, d) => (typeof v === 'boolean' ? v : d);
@@ -29,13 +32,15 @@ export function validate(body) {
   if ([maxPages, maxDepth, extraWaitMs].some(Number.isNaN)) return { error: 'مقادیر عددی نامعتبر است.' };
   const exclude = body.exclude === undefined ? [] : body.exclude;
   if (!Array.isArray(exclude) || exclude.some((x) => typeof x !== 'string')) return { error: 'فهرست مسیرهای مستثنا نامعتبر است.' };
+  const browser = body.browser === undefined ? 'chromium' : body.browser;
+  if (!isBrowserKey(browser) || !isInstalled(browser)) return { error: 'مرورگر انتخاب‌شده نصب نیست.' };
   return {
     url: url.toString(), devices: [...new Set(devs)],
     options: {
       maxPages, maxDepth, extraWaitMs, exclude: exclude.map((s) => s.trim()).filter(Boolean),
       includeSubdomains: bool(body.includeSubdomains, d.includeSubdomains), respectRobots: bool(body.respectRobots, d.respectRobots),
       disableAnimations: bool(body.disableAnimations, d.disableAnimations), hideCookieBanners: bool(body.hideCookieBanners, d.hideCookieBanners),
-      hiDpi: bool(body.hiDpi, d.hiDpi), delayMs: d.delayMs, concurrency: d.concurrency,
+      browser, hiDpi: bool(body.hiDpi, d.hiDpi), delayMs: d.delayMs, concurrency: d.concurrency,
     },
   };
 }
@@ -45,6 +50,13 @@ export function createApp() {
   app.disable('x-powered-by');
   // DNS-rebinding guard: only accept loopback host names.
   app.use((req, res, next) => (/^(127\.0\.0\.1|localhost)(:\d+)?$/i.test(req.headers.host || '') ? next() : res.status(403).end()));
+  // CSRF guard: state-changing requests must come from this very origin (or a non-browser client).
+  app.use((req, res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD') return next();
+    const origin = req.headers.origin;
+    if (origin && new URL(origin).host !== req.headers.host) return res.status(403).end();
+    next();
+  });
   app.use(express.json({ limit: '1mb' }));
   app.use(express.static(fileURLToPath(new URL('../public/', import.meta.url))));
 
@@ -53,7 +65,12 @@ export function createApp() {
     if (v.error) return bad(res, v.error);
     if (getActiveJob()) return res.status(409).json({ error: 'یک کار در حال اجراست.' });
     let cookies = [];
-    try { cookies = parseCookies(req.body.cookies, v.url); } catch (e) {
+    if (req.body.authId) {
+      const st = authStatus(String(req.body.authId));
+      if (!st) return bad(res, 'نشست ورود پیدا نشد؛ دوباره وارد شوید.');
+      if (st.state === 'open') return res.status(409).json({ error: 'ابتدا ورود در پنجرهٔ مرورگر را تأیید کنید.' });
+      cookies = takeCookies(String(req.body.authId));
+    } else try { cookies = parseCookies(req.body.cookies, v.url); } catch (e) {
       if (e instanceof CookieError) return bad(res, e.message);
       throw e;
     }
@@ -86,6 +103,29 @@ export function createApp() {
     await job.cancel();
     res.json({ ok: true });
   });
+
+  app.get('/api/browsers', (_req, res) => res.json(listBrowsers()));
+  app.get('/api/browsers/:key/profiles', async (req, res) => res.json(isBrowserKey(req.params.key) ? await listProfiles(req.params.key) : []));
+
+  const authBody = (req) => {
+    const b = req.body || {};
+    let url;
+    try { url = new URL(String(b.url)); if (!/^https?:$/.test(url.protocol)) throw 0; } catch { return { error: 'آدرس سایت نامعتبر است.' }; }
+    return { browser: String(b.browser || 'chrome'), profile: b.profile ? String(b.profile) : undefined, url: url.toString() };
+  };
+  const authFail = (res, e) => (e instanceof AuthError ? bad(res, e.message) : res.status(500).json({ error: 'خطای داخلی.' }));
+  // mode "extract": read cookies from a private copy of the real profile (no window).
+  // mode "login": open a visible window; the user signs in and confirms.
+  app.post('/api/auth', async (req, res) => {
+    const a = authBody(req); if (a.error) return bad(res, a.error);
+    try {
+      if (req.body.mode === 'login') return res.status(201).json(await openLogin(a));
+      return res.status(201).json(await extractFromProfile(a));
+    } catch (e) { return authFail(res, e); }
+  });
+  app.get('/api/auth/:id', (req, res) => { const st = authStatus(req.params.id); return st ? res.json(st) : res.status(404).json({ error: 'نشست پیدا نشد.' }); });
+  app.post('/api/auth/:id/finish', async (req, res) => { const r = await finishLogin(req.params.id); return r ? res.json(r) : res.status(404).json({ error: 'نشست پیدا نشد.' }); });
+  app.delete('/api/auth/:id', async (req, res) => { await cancelAuth(req.params.id); res.json({ ok: true }); });
 
   app.get('/api/jobs/:id/zip', (req, res) => {
     const job = getJob(req.params.id);

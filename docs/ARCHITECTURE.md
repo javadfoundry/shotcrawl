@@ -31,3 +31,9 @@ Summary of [SPEC.md](SPEC.md); the spec is authoritative.
 - Unauthenticated protected URLs redirect to `/login`; the final URL is canonical, so `/login` is captured once as a public page.
 - Pages taller than 16,000 device px are captured in clipped segments and stitched with `sharp`.
 - `guard.js` makes every browser context read-only (GET only, excluded URLs aborted, service workers blocked).
+
+## Browser and auth modules
+- `browsers.js`: browser catalog, installation detection, launch helpers (clean environment, real OS keyring).
+- `profiles.js`: lists Chrome/Edge profiles and makes a minimal temporary copy (Chrome blocks debugging on the default profile dir and locks live profiles).
+- `auth.js`: in-memory cookie sessions (profile extraction, visible login window). `takeCookies()` hands cookies to a Job once and forgets them. The API only ever returns a count.
+- `server.js` rejects cross-origin state-changing requests (Origin check) in addition to the Host check.

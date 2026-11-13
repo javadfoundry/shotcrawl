@@ -15,11 +15,33 @@
       <input id="url" type="url" dir="ltr" placeholder="https://example.com" required>
       <small id="url-err" class="err"></small>
     </label>
-    <label>کوکی نشست (اختیاری)
-      <textarea id="cookies" dir="ltr" rows="3" autocomplete="off" spellcheck="false" placeholder="session=abc123; other=value   یا خروجی JSON افزونهٔ Cookie-Editor"></textarea>
-      <small><a href="#" id="cookie-help">چگونه کوکی بگیرم؟</a></small>
-      <div id="cookie-help-box" hidden>در مرورگر وارد حساب شوید، سپس DevTools ← Application ← Cookies را باز کنید، یا از افزونهٔ Cookie-Editor گزینهٔ Export را بزنید و متن را اینجا بچسبانید. کوکی فقط در حافظه می‌ماند و ذخیره نمی‌شود.</div>
+    <label>مرورگر
+      <select id="browser"></select>
+      <small id="browser-note"></small>
     </label>
+    <fieldset id="auth"><legend>ورود به حساب (اختیاری)</legend>
+      <label>روش
+        <select id="auth-mode">
+          <option value="none">بدون ورود (فقط صفحات عمومی)</option>
+          <option value="profile">استفاده از نشست پروفایل واقعی مرورگر</option>
+          <option value="login">باز کردن پنجرهٔ مرورگر برای ورود دستی</option>
+          <option value="paste">چسباندن کوکی</option>
+        </select>
+      </label>
+      <label id="profile-row" hidden>پروفایل <select id="profile"></select></label>
+      <div id="login-row" class="row" hidden>
+        <button type="button" id="login-open">باز کردن مرورگر</button>
+        <button type="button" id="login-done" hidden>ورود انجام شد</button>
+      </div>
+      <button type="button" id="profile-read" hidden>خواندن کوکی‌ها از پروفایل</button>
+      <label id="paste-row" hidden>کوکی
+        <textarea id="cookies" dir="ltr" rows="3" autocomplete="off" spellcheck="false" placeholder="session=abc123; other=value   یا خروجی JSON افزونهٔ Cookie-Editor"></textarea>
+        <small><a href="#" id="cookie-help">چگونه کوکی بگیرم؟</a></small>
+        <div id="cookie-help-box" hidden>در مرورگر وارد حساب شوید، سپس DevTools ← Application ← Cookies را باز کنید، یا از افزونهٔ Cookie-Editor گزینهٔ Export را بزنید و متن را اینجا بچسبانید.</div>
+      </label>
+      <p id="auth-state" class="ok"></p>
+      <small>کوکی‌ها فقط در حافظه می‌مانند و پس از پایان کار پاک می‌شوند. از پروفایل واقعی، فقط یک کپی موقت و کم‌حجم از کوکی‌ها خوانده و بلافاصله حذف می‌شود.</small>
+    </fieldset>
     <fieldset><legend>دستگاه‌ها</legend>
       <label class="inline"><input type="checkbox" name="device" value="desktop" checked> دسکتاپ</label>
       <label class="inline"><input type="checkbox" name="device" value="tablet" checked> تبلت</label>
@@ -38,7 +60,7 @@
       <label class="inline"><input type="checkbox" id="hideCookieBanners" checked> پنهان‌کردن بنر کوکی</label>
       <label class="inline"><input type="checkbox" id="hiDpi"> کیفیت بالا (DPR واقعی)</label>
     </details>
-    <div class="row"><button id="start" type="submit">شروع</button><button id="cancel" type="button" hidden>لغو</button><span id="cookie-state" hidden>کوکی: فعال</span></div>
+    <div class="row"><button id="start" type="submit">شروع</button><button id="cancel" type="button" hidden>لغو</button></div>
     <p id="form-err" class="err"></p>
   </form>
 </section>
