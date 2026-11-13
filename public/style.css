@@ -1,0 +1,17 @@
+:root{--bg:#f4f5f7;--fg:#1c1f24;--card:#fff;--mut:#667;--pri:#2563eb;--err:#c62828;--bd:#d0d4da}
+@media(prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e8eaed;--card:#1e2126;--mut:#9aa;--pri:#5b8cff;--err:#ff8a80;--bd:#363b44}}
+@font-face{font-family:Vazirmatn;src:local("Vazirmatn"),url(fonts/Vazirmatn.woff2) format("woff2");font-display:swap}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 Vazirmatn,system-ui,sans-serif}
+header,main{max-width:900px;margin:auto;padding:0 16px}header h1{margin:24px 0 0}header p{color:var(--mut);margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:16px 0}
+label{display:block;margin:10px 0}label.inline{display:inline-flex;gap:6px;margin:6px 14px 6px 0;align-items:center}
+input[type=url],input[type=number],textarea{width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit}
+fieldset{border:1px solid var(--bd);border-radius:8px;margin:10px 0}details{margin:10px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}button,.btn{background:var(--pri);color:#fff;border:0;border-radius:8px;padding:8px 20px;font:inherit;cursor:pointer;text-decoration:none}
+#cancel{background:var(--err)}.err{color:var(--err)}small{color:var(--mut)}#cookie-help-box{background:var(--bg);padding:8px;border-radius:8px;font-size:.9rem}
+progress{width:100%}ul{padding-inline-start:20px;max-height:200px;overflow:auto}#log li.w{color:var(--err)}
+#tabs{display:flex;gap:8px;margin:12px 0}#tabs button{background:var(--bg);color:var(--fg);border:1px solid var(--bd)}#tabs button.on{background:var(--pri);color:#fff}
+#gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+#gallery figure{margin:0;border:1px solid var(--bd);border-radius:8px;overflow:hidden}#gallery a{display:block;height:220px;overflow:hidden}
+#gallery img{width:100%;object-fit:cover;object-position:top;display:block}#gallery figcaption{font-size:.8rem;padding:6px;color:var(--mut)}
+#lb{position:fixed;inset:0;background:#000d;overflow:auto;padding:20px;z-index:9}#lb img{max-width:100%;display:block;margin:auto}

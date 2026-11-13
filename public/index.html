@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>شات‌کرال</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><h1>شات‌کرال</h1><p>اسکرین‌شات خودکار از همهٔ صفحات یک سایت</p></header>
+<main>
+<section id="form-section" class="card">
+  <form id="form" novalidate>
+    <label>آدرس سایت
+      <input id="url" type="url" dir="ltr" placeholder="https://example.com" required>
+      <small id="url-err" class="err"></small>
+    </label>
+    <label>کوکی نشست (اختیاری)
+      <textarea id="cookies" dir="ltr" rows="3" autocomplete="off" spellcheck="false" placeholder="session=abc123; other=value   یا خروجی JSON افزونهٔ Cookie-Editor"></textarea>
+      <small><a href="#" id="cookie-help">چگونه کوکی بگیرم؟</a></small>
+      <div id="cookie-help-box" hidden>در مرورگر وارد حساب شوید، سپس DevTools ← Application ← Cookies را باز کنید، یا از افزونهٔ Cookie-Editor گزینهٔ Export را بزنید و متن را اینجا بچسبانید. کوکی فقط در حافظه می‌ماند و ذخیره نمی‌شود.</div>
+    </label>
+    <fieldset><legend>دستگاه‌ها</legend>
+      <label class="inline"><input type="checkbox" name="device" value="desktop" checked> دسکتاپ</label>
+      <label class="inline"><input type="checkbox" name="device" value="tablet" checked> تبلت</label>
+      <label class="inline"><input type="checkbox" name="device" value="mobile" checked> موبایل</label>
+    </fieldset>
+    <details><summary>تنظیمات پیشرفته</summary>
+      <div class="grid">
+        <label>حداکثر صفحات <input id="maxPages" type="number" min="1" max="500" value="50"></label>
+        <label>حداکثر عمق <input id="maxDepth" type="number" min="0" max="10" value="3"></label>
+        <label>انتظار اضافه (میلی‌ثانیه) <input id="extraWaitMs" type="number" min="0" max="10000" value="500"></label>
+      </div>
+      <label>مسیرهای مستثنا (هر خط یکی) <textarea id="exclude" dir="ltr" rows="3"></textarea></label>
+      <label class="inline"><input type="checkbox" id="includeSubdomains"> شامل زیردامنه‌ها</label>
+      <label class="inline"><input type="checkbox" id="respectRobots"> رعایت robots.txt</label>
+      <label class="inline"><input type="checkbox" id="disableAnimations" checked> غیرفعال‌کردن انیمیشن‌ها</label>
+      <label class="inline"><input type="checkbox" id="hideCookieBanners" checked> پنهان‌کردن بنر کوکی</label>
+      <label class="inline"><input type="checkbox" id="hiDpi"> کیفیت بالا (DPR واقعی)</label>
+    </details>
+    <div class="row"><button id="start" type="submit">شروع</button><button id="cancel" type="button" hidden>لغو</button><span id="cookie-state" hidden>کوکی: فعال</span></div>
+    <p id="form-err" class="err"></p>
+  </form>
+</section>
+
+<section id="progress-section" class="card" hidden>
+  <h2>پیشرفت <span id="phase"></span></h2>
+  <progress id="bar" max="100" value="0"></progress>
+  <p id="counter"></p>
+  <ul id="discovered" dir="ltr"></ul>
+  <h3>گزارش</h3><ul id="log"></ul>
+</section>
+
+<section id="results-section" class="card" hidden>
+  <h2>نتایج</h2>
+  <div class="row"><a id="zip" class="btn" href="#">دانلود ZIP</a><a id="standalone" class="btn" href="#" target="_blank">گالری مستقل</a></div>
+  <nav id="tabs"></nav>
+  <div id="gallery"></div>
+  <h3>رد شده / ناموفق</h3><ul id="issues" dir="ltr"></ul>
+</section>
+</main>
+<div id="lb" hidden></div>
+<script src="app.js" type="module"></script>
+</body>
+</html>
