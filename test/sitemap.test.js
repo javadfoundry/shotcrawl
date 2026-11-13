@@ -47,3 +47,24 @@ describe('sitemap safety', () => {
     expect(await discoverSitemapUrls('http://a.com', f)).toEqual([]);
   });
 });
+
+describe('sitemap redirects', () => {
+  it('never requests an off-site redirect target', async () => {
+    const called = [];
+    const f = async (u) => {
+      called.push(u);
+      if (u === 'http://a.com/sitemap.xml') return { ok: false, status: 302, headers: { get: () => 'http://169.254.169.254/latest' } };
+      return { ok: false };
+    };
+    expect(await discoverSitemapUrls('http://a.com', f)).toEqual([]);
+    expect(called.some((u) => u.includes('169.254'))).toBe(false);
+  });
+  it('follows same-site redirects', async () => {
+    const f = async (u) => {
+      if (u === 'http://a.com/sitemap.xml') return { ok: false, status: 301, headers: { get: () => '/real.xml' } };
+      if (u === 'http://a.com/real.xml') return { ok: true, status: 200, arrayBuffer: async () => Buffer.from(urlset('http://a.com/q')) };
+      return { ok: false };
+    };
+    expect(await discoverSitemapUrls('http://a.com', f)).toEqual(['http://a.com/q']);
+  });
+});

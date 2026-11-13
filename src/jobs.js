@@ -70,6 +70,7 @@ export class Job extends EventEmitter {
     const host = new URL(this.url).hostname.replace(/[^a-z0-9.-]/gi, '_');
     this.runDir = join(config.outputDir, host, stamp(startedAt));
     const emit = (t, d) => this.emitEvent(t, d);
+    let finalEvents = [];
     try {
       await mkdir(this.runDir, { recursive: true });
       this.browser = await chromium.launch();
@@ -89,17 +90,19 @@ export class Job extends EventEmitter {
       });
       await writeManifest(this.runDir, this.manifest);
       await writeGallery(this.runDir, this.manifest);
-      this.phase('done');
-      this.emitEvent('done', { outputDir: this.runDir, pages: crawled.pages.length, failed });
+      finalEvents = [['phase', { phase: 'done' }], ['done', { outputDir: this.runDir, pages: crawled.pages.length, failed }]];
+      this.state = 'done';
     } catch (e) {
-      if (e.cancelled || this.abort.signal.aborted) this.phase('cancelled');
-      else { this.phase('error'); this.emitEvent('warning', { message: `خطا: ${e.message}` }); }
+      if (e.cancelled || this.abort.signal.aborted) { finalEvents = [['phase', { phase: 'cancelled' }]]; this.state = 'cancelled'; }
+      else { finalEvents = [['warning', { message: `خطا: ${e.message}` }], ['phase', { phase: 'error' }]]; this.state = 'error'; }
     } finally {
       await this.browser?.close().catch(() => {});
       this.cookies = null;
       this.secrets = [];
       this.running = false;
       if (active === this) active = null;
+      // Final events go out only after cleanup, so clients never see 'done' while the slot is still busy.
+      finalEvents.forEach(([t, d]) => this.emitEvent(t, d));
       this.emit('end');
     }
   }

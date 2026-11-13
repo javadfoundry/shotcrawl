@@ -26,3 +26,8 @@ Summary of [SPEC.md](SPEC.md); the spec is authoritative.
 - Cookies live only on the Job object and never leave memory or reach any output.
 - GET navigation only; destructive URLs excluded.
 - Server listens on `127.0.0.1` only; `/files/*` blocks path traversal.
+
+## Behavior notes
+- Unauthenticated protected URLs redirect to `/login`; the final URL is canonical, so `/login` is captured once as a public page.
+- Pages taller than 16,000 device px are captured in clipped segments and stitched with `sharp`.
+- `guard.js` makes every browser context read-only (GET only, excluded URLs aborted, service workers blocked).

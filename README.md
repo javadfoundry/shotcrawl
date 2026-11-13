@@ -2,9 +2,9 @@
 
 Give it a site URL and it finds every page, then captures full-page screenshots in desktop, tablet and mobile sizes. Pass a session cookie to include pages behind login. Results appear in a local Persian (RTL) web UI with live progress, a gallery and ZIP download.
 
-> Status: specification complete, implementation pending. See [docs/SPEC.md](docs/SPEC.md).
+> Status: implemented per [docs/SPEC.md](docs/SPEC.md). `npm test` runs unit and end-to-end tests (23 passing).
 
-## Planned usage
+## Usage
 ```bash
 npm install
 npx playwright install chromium

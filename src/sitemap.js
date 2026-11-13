@@ -54,12 +54,22 @@ async function readLimited(res) {
   return Buffer.concat(chunks);
 }
 
-// Only same-site http(s) URLs are fetched (SSRF guard); the final URL after redirects is re-checked.
+// Only same-site http(s) URLs are fetched (SSRF guard). Redirects are followed manually so every
+// hop is validated *before* it is requested.
 async function fetchBuf(url, fetchFn, scope) {
-  if (scope && !isSameSite(url, scope.startUrl, scope.includeSubdomains)) return null;
-  const res = await fetchFn(url, { redirect: 'follow' });
-  if (!res.ok) return null;
-  if (scope && res.url && !isSameSite(res.url, scope.startUrl, scope.includeSubdomains)) return null;
+  let current = url, res;
+  for (let hop = 0; hop <= 5; hop++) {
+    if (scope && !isSameSite(current, scope.startUrl, scope.includeSubdomains)) return null;
+    res = await fetchFn(current, { redirect: 'manual' });
+    if ([301, 302, 303, 307, 308].includes(res.status)) {
+      const loc = res.headers?.get?.('location');
+      if (!loc) return null;
+      current = new URL(loc, current).toString();
+      continue;
+    }
+    break;
+  }
+  if (!res || res.ok === false || [301, 302, 303, 307, 308].includes(res.status)) return null;
   let buf = await readLimited(res);
   if (!buf) return null;
   if (url.endsWith('.gz') || (buf[0] === 0x1f && buf[1] === 0x8b)) {
