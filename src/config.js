@@ -1,0 +1,33 @@
+export const config = {
+  host: '127.0.0.1',
+  port: Number(process.env.PORT) || 3000,
+  outputDir: new URL('../output/', import.meta.url).pathname,
+  defaults: {
+    maxPages: 50,
+    maxDepth: 3,
+    includeSubdomains: false,
+    respectRobots: false,
+    delayMs: 300,
+    concurrency: 3,
+    disableAnimations: true,
+    hideCookieBanners: true,
+    extraWaitMs: 500,
+    hiDpi: false,
+    devices: ['desktop', 'tablet', 'mobile'],
+  },
+  excludePatterns: [
+    '/logout', '/signout', '/sign-out', '/log-out', '/delete', '/remove',
+    '/unsubscribe', '/wp-admin/admin-ajax', '/api/',
+  ],
+  excludeQuery: /(^|&)action=(delete|logout)(&|$)/i,
+  nonPageExtensions: [
+    'pdf', 'zip', 'rar', '7z', 'gz', 'tar', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg',
+    'ico', 'mp4', 'webm', 'mov', 'mp3', 'wav', 'css', 'js', 'mjs', 'json', 'xml', 'txt', 'woff',
+    'woff2', 'ttf', 'otf', 'eot', 'map', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv',
+  ],
+  loginPathRe: /\/(login|signin|sign-in|auth)(\/|$|\?)/i,
+  timeouts: { nav: 30000, idle: 5000, shot: 60000, imgs: 5000, scrollMax: 30000 },
+  scroll: { maxPx: 50000, pauseMs: 150 },
+  tallSegmentPx: 16000,
+  sitemap: { maxDepth: 3, maxUrls: 1000 },
+};
