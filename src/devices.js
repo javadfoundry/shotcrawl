@@ -18,6 +18,7 @@ export function deviceOptions(key, hiDpi = false) {
   const o = {
     viewport: d.viewport, deviceScaleFactor: hiDpi ? d.trueDpr : d.dpr,
     isMobile: d.isMobile, hasTouch: d.hasTouch,
+    serviceWorkers: 'block', // service workers would bypass the request guard (context.route)
   };
   if (d.userAgent) o.userAgent = d.userAgent;
   return o;
