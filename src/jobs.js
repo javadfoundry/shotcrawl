@@ -97,12 +97,13 @@ export class Job extends EventEmitter {
       else { finalEvents = [['warning', { message: `خطا: ${e.message}` }], ['phase', { phase: 'error' }]]; this.state = 'error'; }
     } finally {
       await this.browser?.close().catch(() => {});
-      this.cookies = null;
-      this.secrets = [];
       this.running = false;
       if (active === this) active = null;
-      // Final events go out only after cleanup, so clients never see 'done' while the slot is still busy.
+      // Final events go out after the slot is released but before secrets are cleared,
+      // so they are still redacted.
       finalEvents.forEach(([t, d]) => this.emitEvent(t, d));
+      this.cookies = null;
+      this.secrets = [];
       this.emit('end');
     }
   }

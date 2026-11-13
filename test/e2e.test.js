@@ -106,3 +106,12 @@ describe('e2e', () => {
     expect(srv.address().address).toBe('127.0.0.1');
   });
 });
+
+describe('redaction', () => {
+  it('redacts cookie values in final error events', async () => {
+    const { Job } = await import('../src/jobs.js');
+    const job = new Job({ url: fixture.url, cookies: [{ name: 's', value: 'TOPSECRET', url: fixture.url }], devices: ['desktop'], options: { maxPages: 1, maxDepth: 0, exclude: [], concurrency: 1, delayMs: 0, extraWaitMs: 0 } });
+    job.emitEvent('warning', { message: 'boom TOPSECRET' });
+    expect(JSON.stringify(job.history)).not.toContain('TOPSECRET');
+  });
+});
