@@ -35,3 +35,13 @@ describe('url-utils', () => {
     expect(slugFor('http://a.com/' + 'a'.repeat(300)).length).toBeLessThanOrEqual(100);
   });
 });
+
+describe('exclusion bypass', () => {
+  it('catches encoded and malformed forms', () => {
+    expect(isExcluded('http://a.com/%6cogout')).toBe(true);
+    expect(isExcluded('http://a.com/%256cogout')).toBe(true);
+    expect(isExcluded('http://a.com/x?%61ction=delete')).toBe(true);
+    expect(isExcluded('http://a.com/x?action=%64elete')).toBe(true);
+    expect(isExcluded('http://a.com/%E0%A4%A')).toBe(true);
+  });
+});

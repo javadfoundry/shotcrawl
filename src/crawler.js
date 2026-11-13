@@ -20,7 +20,7 @@ export async function crawl({ browser, startUrl, options, cookies = [], emit = (
 
   let disallow = [];
   if (o.respectRobots) {
-    const robots = await fetchText(new URL(start).origin + '/robots.txt');
+    const robots = await fetchText(new URL(start).origin + '/robots.txt', fetch, { startUrl: start, includeSubdomains: false });
     if (robots) disallow = parseRobotsDisallow(robots);
   }
   const allowed = (url) => !disallow.some((d) => new URL(url).pathname.startsWith(d));
@@ -36,7 +36,7 @@ export async function crawl({ browser, startUrl, options, cookies = [], emit = (
 
   enqueue(start, 0, 'link');
   try {
-    for (const u of await discoverSitemapUrls(start)) enqueue(u, 1, 'sitemap');
+    for (const u of await discoverSitemapUrls(start, fetch, o.includeSubdomains)) enqueue(u, 1, 'sitemap');
   } catch { /* sitemap is best-effort */ }
 
   const context = await browser.newContext(deviceOptions('desktop'));

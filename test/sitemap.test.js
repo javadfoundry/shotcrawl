@@ -31,3 +31,19 @@ describe('sitemap', () => {
     expect(parseRobotsDisallow('User-agent: bot\nDisallow: /no\nUser-agent: *\nDisallow: /admin\nDisallow:')).toEqual(['/admin']);
   });
 });
+
+describe('sitemap safety', () => {
+  it('does not fetch off-site sitemaps', async () => {
+    const called = [];
+    const f = async (u) => { called.push(u); return { ok: false }; };
+    await discoverSitemapUrls('http://a.com', async (u) => (u.endsWith('robots.txt')
+      ? { ok: true, arrayBuffer: async () => Buffer.from('Sitemap: http://169.254.169.254/x.xml') } : f(u)));
+    expect(called.some((u) => u.includes('169.254'))).toBe(false);
+  });
+  it('rejects oversized gzip output', async () => {
+    const { gzipSync } = await import('node:zlib');
+    const big = gzipSync(Buffer.alloc(60 * 1024 * 1024, 'a'));
+    const f = async (u) => (u.endsWith('sitemap.xml') ? { ok: true, arrayBuffer: async () => big } : { ok: false });
+    expect(await discoverSitemapUrls('http://a.com', f)).toEqual([]);
+  });
+});

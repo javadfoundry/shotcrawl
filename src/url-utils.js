@@ -31,11 +31,25 @@ export function hasNonPageExtension(url) {
   return !!m && config.nonPageExtensions.includes(m[1].toLowerCase());
 }
 
+function decodeFully(str) {
+  let cur = str;
+  for (let i = 0; i < 4; i++) {
+    const next = decodeURIComponent(cur); // throws on malformed input
+    if (next === cur) return next;
+    cur = next;
+  }
+  return cur;
+}
+
 export function isExcluded(url, patterns = config.excludePatterns) {
-  let u;
-  try { u = new URL(url); } catch { return true; }
-  if (config.excludeQuery.test(u.search.replace(/^\?/, ''))) return true;
-  const path = u.pathname.toLowerCase();
+  let u, path, query;
+  try {
+    u = new URL(url);
+    // Match against the fully decoded form so %2e / %6c-style encodings cannot dodge the denylist.
+    path = decodeFully(u.pathname).toLowerCase().replace(/\\/g, '/');
+    query = decodeFully(u.search.replace(/^\?/, '').replace(/\+/g, ' ')).replace(/ /g, '+');
+  } catch { return true; } // malformed => treat as excluded
+  if (config.excludeQuery.test(query) || config.excludeQuery.test(u.search.replace(/^\?/, ''))) return true;
   for (const raw of patterns) {
     const pat = String(raw).trim().toLowerCase();
     if (!pat) continue;

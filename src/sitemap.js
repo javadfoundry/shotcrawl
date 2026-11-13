@@ -1,6 +1,9 @@
 import { gunzipSync } from 'node:zlib';
 import { XMLParser } from 'fast-xml-parser';
 import { config } from './config.js';
+import { isSameSite } from './url-utils.js';
+
+const MAX_BYTES = 50 * 1024 * 1024;
 
 const parser = new XMLParser({ ignoreAttributes: true, removeNSPrefix: true });
 const arr = (x) => (x === undefined ? [] : Array.isArray(x) ? x : [x]);
@@ -31,23 +34,48 @@ export function parseRobotsDisallow(text) {
   return rules;
 }
 
-async function fetchBuf(url, fetchFn) {
+async function readLimited(res) {
+  const len = Number(res.headers?.get?.('content-length'));
+  if (len > MAX_BYTES) return null;
+  if (!res.body?.getReader) {
+    const b = Buffer.from(await res.arrayBuffer());
+    return b.length > MAX_BYTES ? null : b;
+  }
+  const chunks = [];
+  let n = 0;
+  const reader = res.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    n += value.length;
+    if (n > MAX_BYTES) { await reader.cancel().catch(() => {}); return null; }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
+// Only same-site http(s) URLs are fetched (SSRF guard); the final URL after redirects is re-checked.
+async function fetchBuf(url, fetchFn, scope) {
+  if (scope && !isSameSite(url, scope.startUrl, scope.includeSubdomains)) return null;
   const res = await fetchFn(url, { redirect: 'follow' });
   if (!res.ok) return null;
-  let buf = Buffer.from(await res.arrayBuffer());
+  if (scope && res.url && !isSameSite(res.url, scope.startUrl, scope.includeSubdomains)) return null;
+  let buf = await readLimited(res);
+  if (!buf) return null;
   if (url.endsWith('.gz') || (buf[0] === 0x1f && buf[1] === 0x8b)) {
-    try { buf = gunzipSync(buf); } catch { return null; }
+    try { buf = gunzipSync(buf, { maxOutputLength: MAX_BYTES }); } catch { return null; }
   }
   return buf.toString('utf8');
 }
 
-export async function fetchText(url, fetchFn = fetch) {
-  try { return await fetchBuf(url, fetchFn); } catch { return null; }
+export async function fetchText(url, fetchFn = fetch, scope) {
+  try { return await fetchBuf(url, fetchFn, scope); } catch { return null; }
 }
 
-export async function discoverSitemapUrls(startUrl, fetchFn = fetch) {
+export async function discoverSitemapUrls(startUrl, fetchFn = fetch, includeSubdomains = false) {
+  const scope = { startUrl, includeSubdomains };
   const origin = new URL(startUrl).origin;
-  const robots = await fetchText(origin + '/robots.txt', fetchFn);
+  const robots = await fetchText(origin + '/robots.txt', fetchFn, scope);
   let queue = robots ? parseRobotsSitemaps(robots) : [];
   if (!queue.length) queue = [origin + '/sitemap.xml', origin + '/sitemap_index.xml'];
   const seen = new Set(), urls = new Set();
@@ -56,7 +84,7 @@ export async function discoverSitemapUrls(startUrl, fetchFn = fetch) {
     const [sm, depth] = level.shift();
     if (seen.has(sm)) continue;
     seen.add(sm);
-    const xml = await fetchText(sm, fetchFn);
+    const xml = await fetchText(sm, fetchFn, scope);
     if (!xml) continue;
     let parsed;
     try { parsed = parseSitemapXml(xml); } catch { continue; }
