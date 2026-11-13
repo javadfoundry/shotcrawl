@@ -23,6 +23,5 @@ else
   summary="$count files"
 fi
 
-git commit -q -m "chore: auto-commit $summary" \
-  -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" || true
+git commit -q -m "chore: auto-commit $summary" || true
 exit 0

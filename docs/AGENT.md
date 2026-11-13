@@ -11,7 +11,8 @@ Claude Code configuration for this repository.
 
 ## Standing rules
 1. Relevant changes are committed automatically; `git push` is done manually by the owner.
-2. Descriptions never contain the phrase "in collaboration with".
+2. Commits carry no Claude co-author trailer; Claude is not listed as a contributor.
+3. Descriptions never contain the phrase "in collaboration with".
 
 ## Notes
 - Hook commits are named `chore: auto-commit <files>`; Claude is expected to make meaningful conventional commits itself first, so the hook only catches leftovers.

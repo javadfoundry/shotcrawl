@@ -6,6 +6,7 @@ Local tool that discovers every public (and, with a session cookie, authenticate
 
 1. **Auto-commit, never push.** Commit relevant changes automatically in small, logical commits. Never run `git push` (or force-push, or open PRs) — the user pushes manually. The Stop hook in `.claude/settings.json` commits leftovers; `git push` is denied in permissions.
 2. **Wording.** Never write the phrase "in collaboration with" (any casing) in descriptions: commit messages, README, docs, package.json, agent/skill descriptions, code comments.
+3. **No Claude attribution.** Commits and PRs must not carry `Co-Authored-By: Claude` (or any Claude/Anthropic contributor trailer or "Generated with" line). Claude must never appear as a contributor.
 
 ## Security anti-goals (from the spec)
 - Cookie values must never appear in logs, manifests, URLs, SSE or API responses.
